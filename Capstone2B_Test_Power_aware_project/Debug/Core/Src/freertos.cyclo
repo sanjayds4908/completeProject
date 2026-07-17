@@ -1,0 +1,10 @@
+../Core/Inc/system_config.h:129:20:reset_activity	1
+../Core/Src/freertos.c:80:6:TemperatureTask	1
+../Core/Src/freertos.c:102:6:PowerMonitorTask	3
+../Core/Src/freertos.c:128:6:MotorControlTask	2
+../Core/Src/freertos.c:141:6:SafetySupervisorTask	18
+../Core/Src/freertos.c:246:6:DisplayTask	9
+../Core/Src/freertos.c:308:6:LoggingTask	6
+../Core/Src/freertos.c:332:6:PowerManagerTask	2
+../Core/Src/freertos.c:348:6:HAL_GPIO_EXTI_Callback	5
+../Core/Src/freertos.c:361:6:MX_FREERTOS_Init	1

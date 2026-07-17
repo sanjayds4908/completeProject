@@ -1,0 +1,10 @@
+../Core/Inc/system_config.h:129:20:reset_activity	8	static
+../Core/Src/freertos.c:80:6:TemperatureTask	32	static
+../Core/Src/freertos.c:102:6:PowerMonitorTask	32	static
+../Core/Src/freertos.c:128:6:MotorControlTask	16	static
+../Core/Src/freertos.c:141:6:SafetySupervisorTask	32	static
+../Core/Src/freertos.c:246:6:DisplayTask	72	static
+../Core/Src/freertos.c:308:6:LoggingTask	88	static
+../Core/Src/freertos.c:332:6:PowerManagerTask	16	static
+../Core/Src/freertos.c:348:6:HAL_GPIO_EXTI_Callback	32	static,ignoring_inline_asm
+../Core/Src/freertos.c:361:6:MX_FREERTOS_Init	296	static

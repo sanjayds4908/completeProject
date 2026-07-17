@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+
+import os
+import time
+import csv
+import serial
+import logging
+from datetime import datetime
+import smbus2
+
+# OLED libraries (Adafruit)
+import board
+import busio
+import adafruit_ssd1306
+from PIL import Image, ImageDraw, ImageFont
+
+# ================= CONFIG =================
+UART_PORT = "/dev/serial0"
+BAUD_RATE = 9600
+LOG_DIR = "/home/sdpuser/logs"
+RTC_ADDR = 0x68
+
+# OLED config
+WIDTH = 128
+HEIGHT = 64
+
+# ================= SETUP =================
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s [%(levelname)s] %(message)s")
+
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# UART setup
+try:
+    ser = serial.Serial(UART_PORT, BAUD_RATE, timeout=2)
+    logging.info("UART initialized")
+except Exception as e:
+    logging.error(f"UART init failed: {e}")
+    ser = None
+
+# I2C setup
+bus = smbus2.SMBus(1)
+
+# OLED setup
+oled = None
+try:
+    i2c = busio.I2C(board.SCL, board.SDA)
+    oled = adafruit_ssd1306.SSD1306_I2C(WIDTH, HEIGHT, i2c)
+    oled.fill(0)
+    oled.show()
+    logging.info("OLED initialized (Adafruit)")
+except Exception as e:
+    logging.warning(f"OLED init failed: {e}")
+
+# Create image buffer
+if oled:
+    image = Image.new("1", (WIDTH, HEIGHT))
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()
+
+# ================= FUNCTIONS =================
+
+def bcd_to_dec(bcd):
+    return (bcd // 16) * 10 + (bcd % 16)
+
+def read_rtc_time():
+    try:
+        data = bus.read_i2c_block_data(RTC_ADDR, 0x00, 7)
+        seconds = bcd_to_dec(data[0] & 0x7F)
+        minutes = bcd_to_dec(data[1])
+        hours = bcd_to_dec(data[2])
+        day = bcd_to_dec(data[4])
+        month = bcd_to_dec(data[5])
+        year = bcd_to_dec(data[6]) + 2000
+        return datetime(year, month, day, hours, minutes, seconds)
+    except:
+        return datetime.now()
+
+def get_log_filename(dt):
+    return os.path.join(LOG_DIR, f"sensor_log_{dt.strftime('%Y-%m-%d')}.csv")
+
+def init_csv(file_path):
+    file_exists = os.path.exists(file_path)
+    f = open(file_path, 'a', newline='')
+    writer = csv.writer(f)
+
+    if not file_exists:
+        writer.writerow(["timestamp", "temp_c", "current_mA", "voltage_v"])
+        f.flush()
+
+    return f, writer
+
+def parse_uart(data):
+    try:
+        if "TEMP" not in data:
+            return None, None, None
+
+        parts = data.strip().split(',')
+
+        temp = float(parts[0].split(':')[1])
+        curr = float(parts[1].split(':')[1])
+        volt = float(parts[2].split(':')[1])
+
+        return temp, curr, volt
+    except:
+        return None, None, None
+
+def update_oled(dt, temp, curr, volt, error=False):
+    if oled is None:
+        return
+
+    try:
+        draw.rectangle((0, 0, WIDTH, HEIGHT), outline=0, fill=0)
+
+        if error:
+            draw.text((0, 0), "ERROR", font=font, fill=255)
+        else:
+            # Format values
+            time_str = dt.strftime('%H:%M:%S')
+
+            line1 = f"Time: {time_str}"
+            line2 = f"Temp: {temp:.1f} C"
+            line3 = f"Curr: {curr:.1f} mA"
+            line4 = f"Volt: {volt:.2f} V"
+
+            # Display 4 lines
+            draw.text((0, 0), line1, font=font, fill=255)
+            draw.text((0, 15), line2, font=font, fill=255)
+            draw.text((0, 30), line3, font=font, fill=255)
+            draw.text((0, 45), line4, font=font, fill=255)
+
+        oled.image(image)
+        oled.show()
+
+    except Exception as e:
+        logging.warning(f"OLED update failed: {e}")
+
+# ================= MAIN =================
+
+def main():
+    current_date = None
+    log_file = None
+    writer = None
+
+    while True:
+        dt = read_rtc_time()
+
+        if current_date != dt.date():
+            if log_file:
+                log_file.close()
+            file_path = get_log_filename(dt)
+            log_file, writer = init_csv(file_path)
+            current_date = dt.date()
+
+        temp, curr, volt = None, None, None
+        error = False
+
+        try:
+            if ser:
+                line = ser.readline().decode('utf-8').strip()
+
+                if not line:
+                    continue
+
+                temp, curr, volt = parse_uart(line)
+
+                if temp is None:
+                    continue
+            else:
+                raise Exception("UART not available")
+
+        except Exception as e:
+            logging.warning(f"UART error: {e}")
+            temp, curr, volt = 0, 0, 0
+            error = True
+
+        timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+
+        try:
+            if error:
+                writer.writerow([timestamp, "ERR", "ERR", "ERR"])
+            else:
+                writer.writerow([timestamp, temp, curr, volt])
+
+            log_file.flush()
+        except:
+            pass
+
+        if error or temp is None or curr is None or volt is None:
+            print(f"{timestamp} | Temp: ERR | Curr: ERR | Volt: ERR")
+        else:
+            print(f"{timestamp} | Temp: {temp:.1f} C | Curr: {curr:.1f} mA | Volt: {volt:.2f} V")
+
+        update_oled(dt, temp, curr, volt, error)
+
+        time.sleep(1)
+
+# ================= RUN =================
+
+if __name__ == "__main__":
+    main()

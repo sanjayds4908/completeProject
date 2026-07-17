@@ -1,0 +1,8 @@
+../Core/Src/power_monitor.c:21:6:i2c_bus_reset	32	static
+../Core/Src/power_monitor.c:66:13:i2c_recover	8	static
+../Core/Src/power_monitor.c:74:26:write_reg	40	static
+../Core/Src/power_monitor.c:83:16:read_reg	40	static
+../Core/Src/power_monitor.c:96:19:ina219_init	16	static
+../Core/Src/power_monitor.c:103:7:ina219_read_voltage	8	static
+../Core/Src/power_monitor.c:114:8:ina219_read_current	16	static
+../Core/Src/power_monitor.c:123:7:ina219_read_power	8	static

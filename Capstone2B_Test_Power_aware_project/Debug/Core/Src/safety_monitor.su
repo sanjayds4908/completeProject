@@ -1,0 +1,8 @@
+../Core/Inc/system_config.h:129:20:reset_activity	8	static
+../Core/Src/safety_monitor.c:20:6:safety_init	8	static
+../Core/Src/safety_monitor.c:25:6:safety_ir_detected	8	static
+../Core/Src/safety_monitor.c:30:6:safety_flame_detected	8	static
+../Core/Src/safety_monitor.c:35:6:safety_buzzer_alarm	8	static
+../Core/Src/safety_monitor.c:41:6:safety_buzzer_warning	16	static
+../Core/Src/safety_monitor.c:53:6:safety_buzzer_off	8	static
+../Core/Src/safety_monitor.c:59:6:safety_evaluate	24	static

@@ -1,0 +1,7 @@
+../Core/Inc/system_config.h:129:20:reset_activity	8	static
+../Core/Inc/system_config.h:134:20:is_system_idle	4	static
+../Core/Src/power_manager.c:15:6:power_manager_init	16	static
+../Core/Src/power_manager.c:27:6:power_manager_enter_sleep	8	static
+../Core/Src/power_manager.c:60:6:power_manager_exit_sleep	16	static
+../Core/Src/power_manager.c:102:6:power_manager_should_sleep	16	static
+../Core/Src/power_manager.c:114:6:power_manager_wakeup_event	32	static,ignoring_inline_asm

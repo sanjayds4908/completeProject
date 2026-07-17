@@ -1,0 +1,10 @@
+../Core/Src/motor_control.c:10:6:motor_init	8	static
+../Core/Src/motor_control.c:16:6:motor_set_speed	24	static
+../Core/Src/motor_control.c:29:6:motor_forward	8	static
+../Core/Src/motor_control.c:35:6:motor_reverse	8	static
+../Core/Src/motor_control.c:41:6:motor_stop	8	static
+../Core/Src/motor_control.c:56:6:motor_emergency_stop	8	static
+../Core/Src/motor_control.c:67:6:motor_reduce_speed	8	static
+../Core/Src/motor_control.c:72:6:motor_resume_nominal	8	static
+../Core/Src/motor_control.c:78:6:motor_power_down	8	static
+../Core/Src/motor_control.c:85:6:motor_power_up	16	static

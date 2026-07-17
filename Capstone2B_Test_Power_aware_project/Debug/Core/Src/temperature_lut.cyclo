@@ -1,0 +1,3 @@
+../Core/Src/temperature_lut.c:36:10:temp_adc_read_averaged	2
+../Core/Src/temperature_lut.c:50:7:temp_lut_lookup	6
+../Core/Src/temperature_lut.c:64:7:temp_lut_interpolate	6

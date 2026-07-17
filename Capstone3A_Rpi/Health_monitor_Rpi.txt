@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+import time
+import csv
+import os
+import sys
+import datetime
+import board
+import busio
+import adafruit_ds3231
+import adafruit_ssd1306
+from PIL import Image, ImageDraw, ImageFont
+
+# --- I2C Setup ---
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# --- RTC Setup ---
+try:
+    rtc = adafruit_ds3231.DS3231(i2c)
+    rtc_available = True
+    print("RTC DS3231 detected at 0x68")
+
+    # Update RTC with system time (only once at startup)
+    now = datetime.datetime.now()
+    rtc.datetime = now.timetuple()
+    print("RTC time updated from system time")
+
+except Exception as e:
+    rtc_available = False
+    print(f"RTC not found, using system time: {e}", file=sys.stderr)
+
+# --- OLED Setup ---
+try:
+    oled = adafruit_ssd1306.SSD1306_I2C(128, 64, i2c, addr=0x3C)
+    oled.fill(0)
+    oled.show()
+    oled_available = True
+    print("OLED SSD1306 detected at 0x3C")
+except Exception as e:
+    oled_available = False
+    print(f"OLED not found, continuing without display: {e}", file=sys.stderr)
+
+# --- CSV Log Setup ---
+log_file = '/home/sdpuser/health_log.csv'
+file_exists = os.path.exists(log_file)
+
+csv_file = open(log_file, 'a', newline='')
+csv_writer = csv.writer(csv_file)
+
+if not file_exists:
+    csv_writer.writerow(['timestamp', 'cpu_temp_c', 'cpu_load_pct', 'ram_used_mb'])
+    csv_file.flush()
+    print("Created new log file with header")
+
+# --- Helper Functions ---
+def get_cpu_temp():
+    with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
+        return int(f.read().strip()) / 1000.0
+
+def get_cpu_load():
+    with open('/proc/loadavg', 'r') as f:
+        load_1min = float(f.read().split()[0])
+        return load_1min * 25  # Approx for 4 cores
+
+def get_ram_used():
+    mem_info = {}
+    with open('/proc/meminfo', 'r') as f:
+        for line in f:
+            parts = line.split()
+            mem_info[parts[0].rstrip(':')] = int(parts[1])
+    return (mem_info['MemTotal'] - mem_info['MemAvailable']) // 1024
+
+def get_timestamp():
+    if rtc_available:
+        try:
+            t = rtc.datetime
+            return f"{t.tm_year}-{t.tm_mon:02d}-{t.tm_mday:02d} {t.tm_hour:02d}:{t.tm_min:02d}:{t.tm_sec:02d}"
+        except:
+            pass
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+def update_oled(timestamp, cpu_temp, cpu_load, ram_used):
+    if not oled_available:
+        return
+    try:
+        image = Image.new('1', (128, 64))
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+
+        time_only = timestamp.split(' ')[1] if ' ' in timestamp else timestamp
+
+        draw.text((0, 0), f"{time_only} {cpu_temp:.1f}C", font=font, fill=255)
+        draw.text((0, 20), f"CPU:{cpu_load:.0f}% RAM:{ram_used}MB", font=font, fill=255)
+
+        oled.image(image)
+        oled.show()
+
+    except Exception as e:
+        print(f"OLED update failed: {e}", file=sys.stderr)
+
+# --- Main Loop ---
+print("Health Monitor started. Press Ctrl+C to stop.")
+print("-" * 50)
+
+try:
+    while True:
+        timestamp = get_timestamp()
+        cpu_temp = get_cpu_temp()
+        cpu_load = get_cpu_load()
+        ram_used = get_ram_used()
+
+        # Write to CSV
+        csv_writer.writerow([timestamp, f"{cpu_temp:.1f}", f"{cpu_load:.1f}", ram_used])
+        csv_file.flush()
+
+        # Update OLED
+        update_oled(timestamp, cpu_temp, cpu_load, ram_used)
+
+        # Print to terminal
+        print(f"{timestamp} | Temp:{cpu_temp:.1f}C | CPU:{cpu_load:.1f}% | RAM:{ram_used}MB")
+
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    print("\nStopping Health Monitor...")
+    csv_file.close()
+
+    if oled_available:
+        oled.fill(0)
+        oled.show()
+
+    print("Stopped cleanly.")
